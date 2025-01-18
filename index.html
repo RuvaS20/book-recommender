@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Recommender</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #bookDisplay {
+            margin-top: 30px;
+        }
+
+        .book-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .book-author {
+            font-size: 18px;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .book-details {
+            color: #95a5a6;
+            line-height: 1.6;
+        }
+
+        #totalBooks {
+            text-align: center;
+            color: #7f8c8d;
+            margin-top: 20px;
+            font-style: italic;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #fileInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Book Recommender</h1>
+        <input type="file" id="fileInput" accept=".csv">
+        <button id="loadButton">Load Your Books</button>
+        <button id="recommendButton" class="hidden">Get New Recommendation</button>
+        
+        <div id="bookDisplay"></div>
+        <div id="totalBooks"></div>
+    </div>
+
+    <script>
+        let books = [];
+        let lastBook = null;
+        const fileInput = document.getElementById('fileInput');
+        const loadButton = document.getElementById('loadButton');
+        const recommendButton = document.getElementById('recommendButton');
+        const bookDisplay = document.getElementById('bookDisplay');
+        const totalBooks = document.getElementById('totalBooks');
+
+        loadButton.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+        recommendButton.addEventListener('click', displayRandomBook);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    Papa.parse(e.target.result, {
+                        header: true,
+                        complete: function(results) {
+                            books = results.data.filter(book => 
+                                book.Bookshelves === 'to-read' && 
+                                book.Title && 
+                                book.Author
+                            );
+                            
+                            totalBooks.textContent = `Total books in your to-read list: ${books.length}`;
+                            loadButton.classList.add('hidden');
+                            recommendButton.classList.remove('hidden');
+                            
+                            if (books.length > 0) {
+                                displayRandomBook();
+                            }
+                        }
+                    });
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function displayRandomBook() {
+            if (books.length === 0) return;
+
+            let randomBook;
+            do {
+                randomBook = books[Math.floor(Math.random() * books.length)];
+            } while (randomBook === lastBook && books.length > 1);
+
+            lastBook = randomBook;
+
+            bookDisplay.innerHTML = `
+                <div class="book-title">${randomBook.Title}</div>
+                <div class="book-author">by ${randomBook.Author}</div>
+                <div class="book-details">
+                    ${randomBook['Original Publication Year'] ? 
+                        `<p>Published: ${randomBook['Original Publication Year']}</p>` : ''}
+                    ${randomBook.Publisher ? 
+                        `<p>Publisher: ${randomBook.Publisher}</p>` : ''}
+                    ${randomBook['Number of Pages'] ? 
+                        `<p>Pages: ${randomBook['Number of Pages']}</p>` : ''}
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
