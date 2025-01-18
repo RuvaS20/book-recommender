@@ -44,6 +44,12 @@
             background-color: #2980b9;
         }
 
+        .upload-section {
+            margin: 20px 0;
+            text-align: center;
+            color: #7f8c8d;
+        }
+
         #bookDisplay {
             margin-top: 30px;
         }
@@ -66,6 +72,18 @@
             line-height: 1.6;
         }
 
+        .book-ratings {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .rating-stars {
+            color: #f1c40f;
+            font-size: 18px;
+        }
+
         #totalBooks {
             text-align: center;
             color: #7f8c8d;
@@ -85,9 +103,13 @@
 <body>
     <div class="container">
         <h1>📚 Book Recommender</h1>
-        <input type="file" id="fileInput" accept=".csv">
-        <button id="loadButton">Load Your Books</button>
-        <button id="recommendButton" class="hidden">Get New Recommendation</button>
+        <button id="recommendButton">Get New Recommendation</button>
+        
+        <div class="upload-section">
+            <p>Using default Goodreads export. Want to use your own list?</p>
+            <input type="file" id="fileInput" accept=".csv">
+            <button id="loadButton">Upload Different CSV</button>
+        </div>
         
         <div id="bookDisplay"></div>
         <div id="totalBooks"></div>
@@ -102,36 +124,61 @@
         const bookDisplay = document.getElementById('bookDisplay');
         const totalBooks = document.getElementById('totalBooks');
 
+        // Load default CSV on page load
+        window.addEventListener('load', loadDefaultCSV);
         loadButton.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileSelect);
         recommendButton.addEventListener('click', displayRandomBook);
+
+        async function loadDefaultCSV() {
+            try {
+                const response = await fetch('goodreads_library_export.csv');
+                const csvText = await response.text();
+                processCSVData(csvText);
+            } catch (error) {
+                console.error('Error loading default CSV:', error);
+                recommendButton.classList.add('hidden');
+            }
+        }
 
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    Papa.parse(e.target.result, {
-                        header: true,
-                        complete: function(results) {
-                            books = results.data.filter(book => 
-                                book.Bookshelves === 'to-read' && 
-                                book.Title && 
-                                book.Author
-                            );
-                            
-                            totalBooks.textContent = `Total books in your to-read list: ${books.length}`;
-                            loadButton.classList.add('hidden');
-                            recommendButton.classList.remove('hidden');
-                            
-                            if (books.length > 0) {
-                                displayRandomBook();
-                            }
-                        }
-                    });
+                    processCSVData(e.target.result);
                 };
                 reader.readAsText(file);
             }
+        }
+
+        function processCSVData(csvText) {
+            Papa.parse(csvText, {
+                header: true,
+                complete: function(results) {
+                    books = results.data.filter(book => 
+                        book.Bookshelves === 'to-read' && 
+                        book.Title && 
+                        book.Author
+                    );
+                    
+                    totalBooks.textContent = `Total books in your to-read list: ${books.length}`;
+                    recommendButton.classList.remove('hidden');
+                    
+                    if (books.length > 0) {
+                        displayRandomBook();
+                    }
+                }
+            });
+        }
+
+        function getStarRating(rating) {
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
+            let stars = '★'.repeat(fullStars);
+            if (hasHalfStar) stars += '½';
+            stars += '☆'.repeat(5 - Math.ceil(rating));
+            return stars;
         }
 
         function displayRandomBook() {
@@ -147,6 +194,10 @@
             bookDisplay.innerHTML = `
                 <div class="book-title">${randomBook.Title}</div>
                 <div class="book-author">by ${randomBook.Author}</div>
+                <div class="book-ratings">
+                    <p>Average Rating: <span class="rating-stars">${getStarRating(parseFloat(randomBook['Average Rating']))}</span> (${randomBook['Average Rating']})</p>
+                    <p>Number of Ratings: ${parseInt(randomBook['Number of Pages']).toLocaleString()}</p>
+                </div>
                 <div class="book-details">
                     ${randomBook['Original Publication Year'] ? 
                         `<p>Published: ${randomBook['Original Publication Year']}</p>` : ''}
