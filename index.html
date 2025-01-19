@@ -1,236 +1,325 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Book Recommender</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
 
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>My Book Recommender</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
 
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .main-button {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-bottom: 20px;
-        }
-
-        .main-button:hover {
-            background-color: #2980b9;
-        }
-
-        .secondary-button {
-            background-color: #95a5a6;
-            padding: 10px 20px;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .secondary-button:hover {
-            background-color: #7f8c8d;
-        }
-
-        .upload-section {
-            margin: 20px 0;
-            text-align: center;
-            font-size: 14px;
-            color: #7f8c8d;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-        }
-
-        #bookDisplay {
-            margin: 30px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .book-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-
-        .book-author {
-            font-size: 18px;
-            color: #7f8c8d;
-            margin-bottom: 20px;
-        }
-
-        .book-ratings {
-            margin: 15px 0;
-            padding: 10px;
-            background: white;
-            border-radius: 5px;
-        }
-
-        .rating-stars {
-            color: #f1c40f;
-            font-size: 18px;
-        }
-
-        .book-details {
-            color: #95a5a6;
-            line-height: 1.6;
-        }
-
-        #totalBooks {
-            text-align: center;
-            color: #7f8c8d;
-            margin-top: 20px;
-            font-style: italic;
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        .error-message {
-            color: #e74c3c;
-            text-align: center;
-            padding: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📚 My Book Recommender</h1>
-        <button id="recommendButton" class="main-button">Get Another Recommendation</button>
-        
-        <div id="bookDisplay"></div>
-        <div id="totalBooks"></div>
-        
-        <div class="upload-section">
-            <p>Want to use your own Goodreads export instead?</p>
-            <input type="file" id="fileInput" accept=".csv">
-            <button id="loadButton" class="secondary-button">Upload Your CSV</button>
-        </div>
-    </div>
-
-    <script>
-        let books = [];
-        let lastBook = null;
-
-        // Load the default CSV immediately when page loads
-        window.addEventListener('load', async () => {
-            try {
-                const response = await fetch('goodreads_library_export.csv');
-                const csvText = await response.text();
-                processCSVData(csvText);
-            } catch (error) {
-                console.error('Error loading default CSV:', error);
-                document.getElementById('bookDisplay').innerHTML = `
-                    <div class="error-message">
-                        Error loading the book list. Please try refreshing the page.
-                    </div>
-                `;
-                document.getElementById('recommendButton').disabled = true;
+            body {
+                font-family: 'Spectral', serif;
+                max-width: 700px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #F5E7D3;
+                min-height: 100vh;
+                position: relative;
             }
-        });
 
-        // Event listeners for buttons
-        document.getElementById('loadButton').addEventListener('click', () => 
-            document.getElementById('fileInput').click()
-        );
-        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
-        document.getElementById('recommendButton').addEventListener('click', displayRandomBook);
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => processCSVData(e.target.result);
-                reader.readAsText(file);
+            .intro {
+                font-size: 16px;
+                line-height: 1.6;
+                color: #AC4800;
+                margin-bottom: 40px;
+                position: relative;
+                z-index: 1;
+                max-width: 600px;
             }
-        }
 
-        function processCSVData(csvText) {
-            Papa.parse(csvText, {
-                header: true,
-                complete: function(results) {
-                    books = results.data.filter(book => 
-                        book.Bookshelves === 'to-read' && 
-                        book.Title && 
-                        book.Author
-                    );
-                    
-                    document.getElementById('totalBooks').textContent = 
-                        `Total books in to-read list: ${books.length}`;
-                    
-                    if (books.length > 0) {
-                        displayRandomBook();
-                    }
+            .heading-container {
+                margin-bottom: 40px;
+                position: relative;
+            }
+
+            .decorative-text {
+                position: absolute;
+                font-size: 100px;
+                color: rgba(172, 72, 0, 0.1);
+                z-index: 0;
+                top: -40px;
+                right: -20px;
+                pointer-events: none;
+                font-weight: 700;
+            }
+
+            .container {
+                background: rgba(255, 255, 255, 0.7);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                padding: 30px;
+                border-radius: 20px;
+                box-shadow:
+                    0 4px 6px rgba(0, 0, 0, 0.1),
+                    0 1px 3px rgba(0, 0, 0, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .container::before {
+                content: '📚';
+                position: absolute;
+                top: -20px;
+                right: -20px;
+                font-size: 100px;
+                opacity: 0.1;
+                transform: rotate(15deg);
+            }
+
+            h1 {
+                font-family: 'Spectral', serif;
+                font-weight: 400;
+                font-size: 36px;
+                color: #AC4800;
+                margin-bottom: 10px;
+                position: relative;
+                z-index: 2;
+            }
+
+            .main-button {
+                display: block;
+                width: 100%;
+                padding: 15px;
+                background-color: #304030;
+                color: white;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                font-size: 18px;
+                margin-bottom: 30px;
+                font-family: 'Spectral', serif;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .main-button:hover {
+                background-color: #3d4f3d;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(48, 64, 48, 0.2);
+            }
+
+            .main-button:active {
+                transform: translateY(0);
+            }
+
+            #bookDisplay {
+                margin: 30px 0;
+                padding: 20px;
+                background: rgba(255, 244, 232, 0.8);
+                border-radius: 15px;
+                position: relative;
+                transition: all 0.3s ease;
+            }
+
+            .book-title {
+                font-family: 'Spectral', serif;
+                font-size: 28px;
+                font-weight: 400;
+                color: #AC4800;
+                margin-bottom: 15px;
+                line-height: 1.2;
+                position: relative;
+            }
+
+            .book-author {
+                font-family: 'Spectral', serif;
+                font-size: 18px;
+                color: #7f8c8d;
+                margin-bottom: 25px;
+            }
+
+            .book-ratings {
+                margin: 16px 0;
+                color: #7f8c8d;
+                font-family: 'Spectral', sans-serif;
+                font-size: 18px;
+            }
+
+            .rating-stars {
+                color: #f1c40f;
+                font-size: 22px;
+                margin-right: 8px;
+            }
+
+            .book-details {
+                color: #95a5a6;
+                line-height: 1.8;
+                font-family: 'Spectral', sans-serif;
+                font-size: 16px;
+            }
+
+            .upload-section {
+                margin-top: 40px;
+                text-align: center;
+                font-size: 16px;
+                color: #7f8c8d;
+                padding-top: 30px;
+                border-top: 1px solid rgba(0, 0, 0, 0.1);
+            }
+
+            #fileInput {
+    display: none;  /* Hides the default file input */
+}
+
+            .secondary-button {
+                background-color: rgba(149, 165, 166, 0.8);
+                padding: 12px 25px;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                font-family: 'Spectral', serif;
+                transition: all 0.3s ease;
+            }
+
+            .secondary-button:hover {
+                background-color: #7f8c8d;
+                transform: translateY(-1px);
+            }
+
+            #totalBooks {
+                text-align: center;
+                color: #7f8c8d;
+                margin-top: 25px;
+                font-style: italic;
+                font-size: 16px;
+            }
+
+            @media (max-width: 768px) {
+                .decorative-text {
+                    font-size: 80px;
                 }
-            });
-        }
 
-        function getStarRating(rating) {
-            rating = parseFloat(rating);
-            const fullStars = Math.floor(rating);
-            const hasHalfStar = rating % 1 >= 0.5;
-            let stars = '★'.repeat(fullStars);
-            if (hasHalfStar) stars += '½';
-            stars += '☆'.repeat(5 - Math.ceil(rating));
-            return stars;
-        }
+                h1 {
+                    font-size: 36px;
+                }
 
-        function displayRandomBook() {
-            if (books.length === 0) return;
+                .container {
+                    padding: 25px;
+                }
+            }
+        </style>
+    </head>
 
-            let randomBook;
-            do {
-                randomBook = books[Math.floor(Math.random() * books.length)];
-            } while (randomBook === lastBook && books.length > 1);
+    <body>
+        <div class="heading-container">
+            <h1>My Book Recommender</h1>
+            <div class="decorative-text">Books</div>
+        </div>
 
-            lastBook = randomBook;
+        <div class="intro">
+            Stuck in a reading rut? This help you discover your next read from your Goodreads "Want to Read"
+            list.
+        </div>
 
-            document.getElementById('bookDisplay').innerHTML = `
+        <div class="container">
+            <button id="recommendButton" class="main-button">Get Another Recommendation</button>
+            <div id="bookDisplay"></div>
+            <div id="totalBooks"></div>
+
+            <div class="upload-section">
+                <p>Want to use your own Goodreads export instead?</p>
+                <input type="file" id="fileInput" accept=".csv">
+                <label for="fileInput" class="secondary-button">Upload Your CSV</label>
+            </div>
+        </div>
+
+        <script>
+            // [Previous JavaScript code remains exactly the same]
+            let books = [];
+            let lastBook = null;
+
+            window.addEventListener('load', async () => {
+                    try {
+                        const response = await fetch('goodreads_library_export.csv');
+                        const csvText = await response.text();
+                        processCSVData(csvText);
+                    } catch (error) {
+                        console.error('Error loading default CSV:', error);
+                        document.getElementById('bookDisplay').innerHTML = `
+            <div class="error-message">
+                Error loading the book list. Please try refreshing the page.
+            </div>
+        `;
+                        document.getElementById('recommendButton').disabled = true;
+                    }
+                });
+
+            
+            document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+            document.getElementById('recommendButton').addEventListener('click', displayRandomBook);
+
+            function handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => processCSVData(e.target.result);
+                    reader.readAsText(file);
+                }
+            }
+
+            function processCSVData(csvText) {
+                Papa.parse(csvText, {
+                    header: true,
+                    complete: function (results) {
+                        books = results.data.filter(book =>
+                            book.Bookshelves === 'to-read' &&
+                            book.Title &&
+                            book.Author
+                        );
+
+                        document.getElementById('totalBooks').textContent =
+                            `Total books in to-read list: ${books.length}`;
+
+                        if (books.length > 0) {
+                            displayRandomBook();
+                        }
+                    }
+                });
+            }
+
+            function getStarRating(rating) {
+                rating = parseFloat(rating);
+                const fullStars = Math.floor(rating);
+                const hasHalfStar = rating % 1 >= 0.5;
+                let stars = '★'.repeat(fullStars);
+                if (hasHalfStar) stars += '½';
+                stars += '☆'.repeat(5 - Math.ceil(rating));
+                return stars;
+            }
+
+            function displayRandomBook() {
+                if (books.length === 0) return;
+
+                let randomBook;
+                do {
+                    randomBook = books[Math.floor(Math.random() * books.length)];
+                } while (randomBook === lastBook && books.length > 1);
+
+                lastBook = randomBook;
+
+                document.getElementById('bookDisplay').innerHTML = `
                 <div class="book-title">${randomBook.Title}</div>
                 <div class="book-author">by ${randomBook.Author}</div>
                 <div class="book-ratings">
                     <p>Average Rating: <span class="rating-stars">${getStarRating(randomBook['Average Rating'])}</span> 
-                    (${randomBook['Average Rating']} from ${parseInt(randomBook['Ratings']).toLocaleString()} ratings)</p>
+                    (${randomBook['Average Rating']})</p>
                 </div>
                 <div class="book-details">
-                    ${randomBook['Original Publication Year'] ? 
+                    ${randomBook['Original Publication Year'] ?
                         `<p>Published: ${randomBook['Original Publication Year']}</p>` : ''}
-                    ${randomBook.Publisher ? 
-                        `<p>Publisher: ${randomBook.Publisher}</p>` : ''}
-                    ${randomBook['Number of Pages'] ? 
+                    
+                    ${randomBook['Number of Pages'] ?
                         `<p>Pages: ${randomBook['Number of Pages']}</p>` : ''}
                 </div>
             `;
-        }
-    </script>
-</body>
+            }
+        </script>
+    </body>
+
 </html>
